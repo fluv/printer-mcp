@@ -19,14 +19,16 @@ MCP_HEADERS = {
 
 
 def _parse_response(response: httpx.Response) -> dict[str, Any]:
-    """MCP streamable-HTTP returns either JSON or SSE depending on negotiation."""
+    """MCP streamable-HTTP responds either as JSON or as a single SSE event."""
     ct = response.headers.get("content-type", "")
     if "application/json" in ct:
         return response.json()
     if "text/event-stream" in ct:
         for line in response.text.splitlines():
-            if line.startswith("data: "):
-                return json.loads(line.removeprefix("data: "))
+            if line.startswith("data:"):
+                # SSE spec allows zero or more spaces after `data:`; strip
+                # leading whitespace rather than assuming `data: ` with one space.
+                return json.loads(line[5:].lstrip())
         raise AssertionError(f"no data event in SSE body: {response.text!r}")
     raise AssertionError(f"unexpected content-type: {ct!r}")
 
