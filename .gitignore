@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Leftover from earlier TS scaffold attempt — see git history
+node_modules/
+package-lock.json
+package.json
+tsconfig.json
+.nvmrc

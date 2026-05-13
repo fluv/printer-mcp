@@ -1,0 +1,36 @@
+FROM python:3.12-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+WORKDIR /build
+COPY pyproject.toml ./
+COPY src ./src
+
+RUN pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+# texlive — LaTeX compilation toolchain. texlive-pictures bundles tikz.
+# poppler-utils — pdftoppm for per-page PNG render.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        texlive-latex-recommended \
+        texlive-fonts-recommended \
+        texlive-pictures \
+        poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels printer-mcp \
+    && rm -rf /wheels
+
+RUN useradd -m -u 1000 -s /bin/sh app
+USER app
+WORKDIR /home/app
+
+ENV PORT=8080
+EXPOSE 8080
+
+CMD ["python", "-m", "printer_mcp"]
