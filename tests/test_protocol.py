@@ -88,7 +88,9 @@ async def test_tools_list_returns_both_stubs_with_schemas(
     assert r.status_code == 200, r.text
     body = _parse_response(r)
     tool_names = {t["name"] for t in body["result"]["tools"]}
-    assert tool_names == {"print_latex", "watch_page"}
+    # Superset rather than exact equality: adding new tools should add new
+    # tests, not break the existing schema-inference check.
+    assert tool_names >= {"print_latex", "watch_page"}
     schemas = {t["name"]: t["inputSchema"] for t in body["result"]["tools"]}
     assert "source" in schemas["print_latex"]["properties"]
     assert "copies" in schemas["print_latex"]["properties"]

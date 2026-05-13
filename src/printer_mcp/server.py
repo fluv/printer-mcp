@@ -1,5 +1,6 @@
 """FastMCP server with stub tools, plus /healthz and /metrics as custom routes."""
 
+import os
 from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
@@ -19,15 +20,20 @@ VERSION = __version__
 # don't keep MCP session state between calls. Each request carries everything
 # the server needs.
 #
-# DNS-rebinding protection is disabled: the service sits behind kube + Tailscale
-# (see kube manifests for the printer-mcp deployment) and isn't reachable on
-# the public internet. The default allowlist (localhost/127.0.0.1) would reject
-# legitimate traffic from the cluster's ingress hostnames.
+# DNS-rebinding protection defaults off: the service sits behind kube + Tailscale
+# (see the kube manifests for the printer-mcp deployment) and isn't reachable on
+# the public internet, and FastMCP's default allowlist (localhost / 127.0.0.1)
+# would reject legitimate cluster traffic. If the deployment model ever changes
+# to a public-facing ingress, set MCP_DNS_REBINDING_PROTECTION=on to re-enable.
+_DNS_REBINDING_ON = os.environ.get("MCP_DNS_REBINDING_PROTECTION", "off").strip().lower() in (
+    "on", "1", "true", "yes",
+)
+
 mcp = FastMCP(
     SERVER_NAME,
     stateless_http=True,
     transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=False,
+        enable_dns_rebinding_protection=_DNS_REBINDING_ON,
     ),
 )
 
