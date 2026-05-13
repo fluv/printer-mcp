@@ -1,3 +1,3 @@
-"""MCP server for the Brother HL-L2865DW printer."""
+"""MCP server for printing LaTeX via IPP."""
 
 __version__ = "0.1.0"
