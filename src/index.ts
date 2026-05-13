@@ -50,8 +50,8 @@ function createMcpServer(): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const toolName = request.params.name;
+    // TODO: use args for tool logic once tools are implemented
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
-    const startMs = Date.now();
     const endTimer = toolCallDuration.startTimer({ tool: toolName });
 
     const finish = (outcome: "ok" | "error") => {
