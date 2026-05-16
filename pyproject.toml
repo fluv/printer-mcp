@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "printer-mcp"
-version = "1.0.0"
+version = "1.1.0"
 description = "MCP server for the Brother HL-L2865DW printer — LaTeX compile → IPP submit → per-page reveal"
 readme = "README.md"
 requires-python = ">=3.12"

@@ -16,7 +16,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 # texlive — LaTeX compilation toolchain. texlive-pictures bundles tikz,
 #           latexmk drives multi-pass compilation.
 # poppler-utils — pdftoppm (per-page PNG render) and pdfinfo (page count).
-# ghostscript — PDF → PWG-Raster via the pwgraster device (discussions/890).
+# ghostscript — PDF → URF via the urfgray device (discussions/890; switched
+#               from pwgraster after that pipeline rendered inverted).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         texlive-latex-recommended \
         texlive-fonts-recommended \

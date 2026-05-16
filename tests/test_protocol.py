@@ -120,13 +120,13 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, 
     def fake_page_count(pdf: Path) -> int:
         return state["total_pages"]
 
-    def fake_to_pwg(pdf: Path, pwg: Path, dpi: int, page_pixels: tuple[int, int]) -> None:
-        pwg.write_bytes(b"RaS2-fake")
+    def fake_to_urf(pdf: Path, urf: Path, dpi: int, page_pixels: tuple[int, int]) -> None:
+        urf.write_bytes(b"UNIRAST\x00fake")
 
     def fake_page_to_png(pdf: Path, page: int, dpi: int = 100) -> bytes:
         return _TINY_PNG
 
-    def fake_submit(uri: str, pwg_path: str, job_name: str, user: str, **_: Any) -> int:
+    def fake_submit(uri: str, urf_path: str, job_name: str, user: str, **_: Any) -> int:
         if state["raise_ipp_error"]:
             from printer_mcp.ipp import IppError
             raise IppError("simulated IPP failure")
@@ -158,9 +158,9 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, 
     # there, not in the source module.
     monkeypatch.setattr(server, "compile_latex", fake_compile)
     monkeypatch.setattr(server, "page_count", fake_page_count)
-    monkeypatch.setattr(server, "to_pwg", fake_to_pwg)
+    monkeypatch.setattr(server, "to_urf", fake_to_urf)
     monkeypatch.setattr(server, "page_to_png", fake_page_to_png)
-    monkeypatch.setattr(server, "submit_pwg", fake_submit)
+    monkeypatch.setattr(server, "submit_urf", fake_submit)
     monkeypatch.setattr(server, "get_job_attrs", fake_get_job_attrs)
     monkeypatch.setattr(server, "get_printer_attrs", fake_get_printer_attrs)
     # Speed up the poll loop in tests — Config is frozen so swap the whole
@@ -350,7 +350,7 @@ async def test_capabilities_resource_includes_format_and_model(
     contents = await mcp.read_resource("printer://capabilities")
     body = json.loads(_content_text_from_resource(contents))
     assert body["printer-make-and-model"] == "Brother HL-L2865DW"
-    assert "image/pwg-raster" in body["document-format-supported"]
+    assert "image/urf" in body["document-format-supported"]
     assert body["pages-per-minute"] == 34
     # Status-only fields should not appear.
     assert "printer-state" not in body

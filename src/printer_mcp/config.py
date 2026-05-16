@@ -18,14 +18,14 @@ class Config:
     printer_uri: str
     """Full IPP URI of the target printer, e.g. ``ipp://192.168.1.251/ipp/print``."""
 
-    pwg_dpi: int
-    """Resolution for PDF→PWG-Raster conversion. The HL-L2865DW reports
-    600dpi as its native resolution; submitting at a lower DPI causes the
-    printer to upsample internally with a quality cost. See discussions/890."""
+    raster_dpi: int
+    """Resolution for PDF→URF conversion. The HL-L2865DW reports 600dpi as
+    its native resolution; submitting at a lower DPI causes the printer to
+    upsample internally with a quality cost. See discussions/890."""
 
     page_size: tuple[int, int]
-    """PWG-Raster output pixel dimensions ``(width, height)``. Defaults to A4
-    at ``pwg_dpi``."""
+    """Raster output pixel dimensions ``(width, height)``. Defaults to A4
+    at ``raster_dpi``."""
 
     first_page_timeout_s: float
     """Seconds to wait for ``job-impressions-completed >= 1`` after submitting
@@ -52,10 +52,15 @@ def _a4_pixels(dpi: int) -> tuple[int, int]:
 
 def load_config() -> Config:
     """Build a Config from environment variables, with sensible defaults."""
-    dpi = int(os.environ.get("PRINTER_MCP_PWG_DPI", "600"))
+    # PRINTER_MCP_PWG_DPI kept as legacy fallback for any deployment carrying
+    # the old env var name; new deployments should use PRINTER_MCP_RASTER_DPI.
+    dpi = int(
+        os.environ.get("PRINTER_MCP_RASTER_DPI")
+        or os.environ.get("PRINTER_MCP_PWG_DPI", "600")
+    )
     return Config(
         printer_uri=os.environ.get("PRINTER_MCP_URI", "ipp://192.168.1.251/ipp/print"),
-        pwg_dpi=dpi,
+        raster_dpi=dpi,
         page_size=_a4_pixels(dpi),
         first_page_timeout_s=float(os.environ.get("PRINTER_MCP_FIRST_PAGE_TIMEOUT", "60")),
         next_page_timeout_s=float(os.environ.get("PRINTER_MCP_NEXT_PAGE_TIMEOUT", "60")),
