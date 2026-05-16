@@ -2,8 +2,7 @@ printer-mcp
 ===========
 
 MCP server that compiles LaTeX, submits to a Brother HL-L2865DW via IPP, and
-streams per-page PNG renders back to the model as the printer announces each
-page complete.
+streams per-page PNG renders back to the model as each physical sheet ejects.
 
 Design notes: [fluv/claude discussions/890](https://github.com/fluv/claude/discussions/890).
 Implementation tracker: [fluv/claude#892](https://github.com/fluv/claude/issues/892).
@@ -11,28 +10,60 @@ Implementation tracker: [fluv/claude#892](https://github.com/fluv/claude/issues/
 Status
 ------
 
-`v0.2.0` — verification stub. `print_latex` and `watch_page` ignore their
-arguments and return synthetic page PNGs, so the open question from
-[discussions/890](https://github.com/fluv/claude/discussions/890#open-questions-on-client-support)
-about claude.ai's rendering of `ImageContent` and chained tool-call thinking
-blocks can be answered before the real LaTeX/IPP pipeline is written. The
-v1 PR replaces both tools with the real implementations and deletes
-`_stub_pages.py`.
-
-The container still ships with `texlive-latex-recommended`,
-`texlive-pictures` (for tikz), and `poppler-utils` (for `pdftoppm`) so the
-LaTeX/PDF layer is in place ready for v1.
+`v1.0.0` — production pipeline. LaTeX → PDF (latexmk) → PWG-Raster
+(ghostscript) → IPP (hand-rolled client) → polled `job-impressions-completed`
+per physical sheet. Two tools (`print_latex`, `watch_page`) plus four
+resources (`printer://status`, `printer://capabilities`,
+`printer://jobs/<id>`, `printer://history`). The shipped skill
+(`.claude/skills/printer/SKILL.md`) biases the model toward narrating each
+page as it arrives.
 
 Tools
 -----
 
-- `print_latex(source, copies)` — in v1, compiles LaTeX, submits via IPP,
-  blocks until page 1 is physically out, returns `{ job_id, total_pages }`
-  plus a PNG of page 1 inline. In v0.2.0, returns the synthetic
-  `stub-job-1` fixture instead.
-- `watch_page(job_id)` — in v1, blocks until the next page is physically
-  out and returns its PNG. In v0.2.0, reveals pages 2 and 3 of the
-  synthetic fixture; a fourth call returns text-only "no more pages".
+- `print_latex(source, copies)` — compiles LaTeX, submits via IPP,
+  blocks until page 1 is physically out (~14s cold fuser, ~5s warm),
+  returns `{ job_id, total_pages, first_page_seconds }` plus a PNG of
+  page 1 inline. LaTeX compile failures return the texlive log tail
+  without submitting.
+- `watch_page(job_id)` — blocks until `job-impressions-completed`
+  advances, returns the next page's PNG. After the final page, returns
+  a text-only completion payload.
+
+Resources
+---------
+
+- `printer://status` — printer-state, marker levels, paper, queued jobs.
+- `printer://capabilities` — model, supported formats, ppm, resolutions.
+- `printer://jobs/<id>` — our pod-local record + live IPP attributes.
+- `printer://history` — all jobs submitted since this pod started.
+
+Job history is in-memory only — pod restart wipes it. Persistent
+storage was considered and rejected during design (discussions/890); the
+cost of an accidental re-print is one sheet of paper, well under the cost
+of carrying SQLite + a PVC.
+
+Configuration
+-------------
+
+Environment variables (see `src/printer_mcp/config.py`):
+
+| Var | Default | Purpose |
+|---|---|---|
+| `PRINTER_MCP_URI` | `ipp://192.168.1.251/ipp/print` | Target printer IPP URI |
+| `PRINTER_MCP_PWG_DPI` | `600` | PWG-Raster resolution; HL-L2865DW native is 600dpi |
+| `PRINTER_MCP_FIRST_PAGE_TIMEOUT` | `60` | Max wait for page 1 (cold fuser ~14s) |
+| `PRINTER_MCP_NEXT_PAGE_TIMEOUT` | `60` | Max wait for subsequent pages (~1.7s warm) |
+| `PRINTER_MCP_POLL_INTERVAL` | `0.5` | Get-Job-Attributes poll cadence |
+| `PRINTER_MCP_USER` | `printer-mcp` | requesting-user-name on IPP operations |
+
+Physical setup
+--------------
+
+The printer's rear straight-through paper path should be enabled for
+correct page order (face-up output). The default face-down top tray
+reverses the read order. This is a physical setting on the unit — the
+MCP doesn't change the output-bin selection at the IPP layer.
 
 Run locally
 -----------
@@ -52,7 +83,7 @@ Tests
 pytest -q
 ```
 
-The test suite exercises the MCP protocol layer (JSON-RPC over the
-streamable-HTTP transport against the ASGI app), rather than calling tool
-functions directly. This catches schema-inference bugs that bypass unit-test
-paths.
+The protocol-layer tests speak real MCP JSON-RPC over httpx's ASGI
+transport against the FastMCP app, with all subprocess-driven dependencies
+(latex, pdf, ipp) monkeypatched to deterministic fakes. End-to-end against
+the physical printer is a manual integration step.

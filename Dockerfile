@@ -13,13 +13,17 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
-# texlive — LaTeX compilation toolchain. texlive-pictures bundles tikz.
-# poppler-utils — pdftoppm for per-page PNG render.
+# texlive — LaTeX compilation toolchain. texlive-pictures bundles tikz,
+#           latexmk drives multi-pass compilation.
+# poppler-utils — pdftoppm (per-page PNG render) and pdfinfo (page count).
+# ghostscript — PDF → PWG-Raster via the pwgraster device (discussions/890).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         texlive-latex-recommended \
         texlive-fonts-recommended \
         texlive-pictures \
+        latexmk \
         poppler-utils \
+        ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /wheels /wheels
