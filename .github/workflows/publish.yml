@@ -29,6 +29,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Pull the package version out of pyproject.toml so the published image
+      # carries an immutable `1.1.0`-style tag alongside the floating `main`
+      # tag. Lets deployments pin to a specific version without using sha-XXX.
+      - name: Read package version
+        id: pkgver
+        run: |
+          VERSION=$(awk -F'"' '/^version = / {print $2; exit}' pyproject.toml)
+          if [ -z "$VERSION" ]; then
+            echo "Could not read version from pyproject.toml" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Image metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -36,6 +49,7 @@ jobs:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.pkgver.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-,format=short
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
