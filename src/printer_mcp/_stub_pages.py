@@ -6,9 +6,11 @@ base64 so the deployed image needs no extra runtime dependency for the stub
 phase — the real implementation will render pages via `pdftoppm` and won't
 need these.
 
-Generated once with Pillow; do not edit by hand. To regenerate, see the
-recipe in `docs/regenerate_stub_pages.md` (or in the comment block at the
-top of the generator script if you still have it locally).
+Generated once via Pillow: 600×850 RGB canvas per page, DejaVuSans-Bold for
+the numeral, distinct background per page (warm white / pale green / pale
+blue), bordered rectangle, then `Image.save(..., format="PNG", optimize=True)`
+and `base64.b64encode` the bytes. This module is deleted by v1 — no
+re-generation expected in practice.
 """
 
 from __future__ import annotations
