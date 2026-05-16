@@ -12,8 +12,6 @@ This module is deleted by v1 — the real implementation renders pages via
 ``pdftoppm`` from the compiled PDF.
 """
 
-from __future__ import annotations
-
 from importlib.resources import files
 
 _PAGE_COUNT = 3

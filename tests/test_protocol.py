@@ -69,12 +69,14 @@ async def _initialize(client: httpx.AsyncClient) -> str:
     return session_id
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def _reset_stub_state() -> None:
-    """Each direct-call test starts with no pages revealed.
+    """Each test starts with no pages revealed.
 
-    Module-level state persists across tests within the session; without this
-    reset a later test would inherit page counters from an earlier one.
+    Module-level state in ``printer_mcp.server`` persists across tests within
+    the session; without this reset a later test would inherit page counters
+    from an earlier one. Autouse so a future test that calls the stub tools
+    without remembering to request the fixture doesn't silently inherit state.
     """
     _PAGES_SHOWN.clear()
 
@@ -140,7 +142,7 @@ def _content_mime(block: Any) -> str:
 
 
 @pytest.mark.asyncio
-async def test_print_latex_returns_text_plus_image(_reset_stub_state: None) -> None:
+async def test_print_latex_returns_text_plus_image() -> None:
     blocks = await mcp.call_tool("print_latex", {"source": "\\documentclass{article}"})
     # Exactly one text block and one image block, in that order — verifies the
     # multi-content tuple return is wired up correctly.
@@ -155,7 +157,7 @@ async def test_print_latex_returns_text_plus_image(_reset_stub_state: None) -> N
 
 
 @pytest.mark.asyncio
-async def test_watch_page_walks_remaining_pages(_reset_stub_state: None) -> None:
+async def test_watch_page_walks_remaining_pages() -> None:
     """Three sequential calls: page 2, page 3, then complete."""
     # Prime page 1 via print_latex.
     await mcp.call_tool("print_latex", {"source": "x"})
@@ -177,7 +179,7 @@ async def test_watch_page_walks_remaining_pages(_reset_stub_state: None) -> None
 
 
 @pytest.mark.asyncio
-async def test_watch_page_unknown_job_reveals_page_one(_reset_stub_state: None) -> None:
+async def test_watch_page_unknown_job_reveals_page_one() -> None:
     """An unknown job_id still returns an image — the stub treats any first call
     as "reveal page 1" so the surface test isn't blocked by id-management.
     """
