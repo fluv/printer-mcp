@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import http.client
 import io
-import socket
 import struct
 import urllib.parse
 from dataclasses import dataclass
@@ -250,7 +249,7 @@ def _post(uri: str, payload: bytes, timeout: float) -> bytes:
                 headers={"Content-Type": "application/ipp"},
             )
             resp = conn.getresponse()
-        except (TimeoutError, socket.timeout) as exc:
+        except TimeoutError as exc:
             raise IppError(f"IPP transport timeout against {uri}") from exc
         except OSError as exc:
             raise IppError(f"IPP transport error against {uri}: {exc}") from exc

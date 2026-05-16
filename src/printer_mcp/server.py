@@ -201,6 +201,11 @@ def print_latex(
     """
     with track_tool("print_latex"):
         workdir = _new_workdir()
+        # The workdir is only preserved once the job is recorded in JOBS —
+        # watch_page needs the PDF to render subsequent pages. Until that
+        # point any exit path cleans up; flip ``preserve_workdir`` only after
+        # JOBS.add succeeds.
+        preserve_workdir = False
         try:
             try:
                 compiled = compile_latex(source, workdir)
@@ -231,6 +236,7 @@ def print_latex(
                     copies=copies,
                 )
             )
+            preserve_workdir = True
             log.info(
                 "submitted job-id=%d total-pages=%d job-name=%s",
                 job_id, total_pages, job_name,
@@ -272,10 +278,13 @@ def print_latex(
                 ),
             }
             return json.dumps(payload), Image(data=png, format="png")
-        except Exception:
-            # Best-effort cleanup if anything raised before the job was recorded.
-            shutil.rmtree(workdir, ignore_errors=True)
-            raise
+        finally:
+            # Workdir is cleaned up on any exit path that didn't successfully
+            # register the job — compile error, IPP failure, mid-flight raise.
+            # Once preserve_workdir flips, the lifecycle is owned by the job
+            # record and watch_page can find the PDF.
+            if not preserve_workdir:
+                shutil.rmtree(workdir, ignore_errors=True)
 
 
 @mcp.tool(structured_output=False)

@@ -109,9 +109,6 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, 
         "raise_ipp_error": False,
     }
 
-    pdf_target = tmp_path / "job.pdf"
-    pdf_target.write_bytes(b"%PDF-fake")
-
     def fake_compile(source: str, workdir: Path, **kwargs: Any) -> CompileResult:
         if state["raise_compile_error"]:
             raise CompileError("syntax error in source", log_tail="! Undefined control sequence.")
