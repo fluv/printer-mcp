@@ -20,7 +20,6 @@ Probes against the HL-L2865DW (discussions/890) established that:
 from __future__ import annotations
 
 import http.client
-import io
 import struct
 import urllib.parse
 from dataclasses import dataclass
@@ -334,36 +333,3 @@ __all__ = [
     "get_printer_attrs",
     "submit_pwg",
 ]
-
-# Used in tests to round-trip a fake printer.
-def build_response(status_code: int, attrs: list[tuple[int, int, str, Any]]) -> bytes:
-    """Build an IPP response payload from a list of (group, value-tag, name, value) tuples.
-
-    Test helper; not used by the production code path. Lives here so tests can
-    construct deterministic responses without duplicating the encoder.
-    """
-    buf = io.BytesIO()
-    buf.write(IPP_VERSION)
-    buf.write(struct.pack(">H", status_code))
-    buf.write(struct.pack(">I", 1))
-    current_group: int | None = None
-    for group, tag, name, value in attrs:
-        if group != current_group:
-            buf.write(bytes([group]))
-            current_group = group
-        encoded_value: bytes
-        if tag in _INTEGER_TAGS:
-            encoded_value = struct.pack(">i", value)
-        elif tag in _STRING_TAGS:
-            encoded_value = str(value).encode("utf-8")
-        elif tag == TAG_NO_VALUE:
-            encoded_value = b""
-        else:
-            encoded_value = value if isinstance(value, bytes) else str(value).encode("utf-8")
-        name_bytes = name.encode("utf-8")
-        buf.write(struct.pack(">B H", tag, len(name_bytes)))
-        buf.write(name_bytes)
-        buf.write(struct.pack(">H", len(encoded_value)))
-        buf.write(encoded_value)
-    buf.write(bytes([TAG_END_OF_ATTRS]))
-    return buf.getvalue()
