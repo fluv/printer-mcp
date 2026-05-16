@@ -84,7 +84,7 @@ def page_to_png(pdf: Path, page: int, dpi: int = PREVIEW_DPI) -> bytes:
     if pdftoppm is None:
         raise RuntimeError("pdftoppm not found; image missing poppler-utils?")
     out_prefix = pdf.parent / f"page-{page}"
-    out_path = pdf.parent / f"page-{page}.png"
+    out_path = out_prefix.with_suffix(".png")
     cmd = [
         pdftoppm,
         "-png",
