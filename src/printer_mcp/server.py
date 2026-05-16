@@ -2,7 +2,7 @@
 
 Orchestrates the pipeline drafted in discussions/890:
 
-    LaTeX source ─► latexmk ─► PDF ─► gs pwgraster ─► PWG ─► IPP Print-Job
+    LaTeX source ─► latexmk ─► PDF ─► gs urfgray ─► URF ─► IPP Print-Job
                                                                 │
                                                                 ▼
         ◄──── per-sheet ────  Get-Job-Attributes polling on `job-impressions-completed`
@@ -49,12 +49,12 @@ from .ipp import (
     IppError,
     get_job_attrs,
     get_printer_attrs,
-    submit_pwg,
+    submit_urf,
 )
 from .jobs import Job, JobStore, now
 from .latex import CompileError, compile_latex
 from .metrics import REGISTRY, track_tool
-from .pdf import page_count, page_to_png, to_pwg
+from .pdf import page_count, page_to_png, to_urf
 
 log = logging.getLogger(__name__)
 
@@ -214,14 +214,14 @@ def print_latex(
                 return f"LaTeX compile failed: {exc}\n\n--- log tail ---\n{exc.log_tail}"
 
             total_pages = page_count(compiled.pdf_path)
-            pwg_path = workdir / "job.pwg"
-            to_pwg(compiled.pdf_path, pwg_path, CONFIG.pwg_dpi, CONFIG.page_size)
+            urf_path = workdir / "job.urf"
+            to_urf(compiled.pdf_path, urf_path, CONFIG.raster_dpi, CONFIG.page_size)
 
             job_name = f"printer-mcp/{uuid.uuid4().hex[:6]}"
             submit_t = now()
-            job_id = submit_pwg(
+            job_id = submit_urf(
                 CONFIG.printer_uri,
-                str(pwg_path),
+                str(urf_path),
                 job_name=job_name,
                 user=CONFIG.requesting_user_name,
             )

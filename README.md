@@ -10,8 +10,8 @@ Implementation tracker: [fluv/claude#892](https://github.com/fluv/claude/issues/
 Status
 ------
 
-`v1.0.0` — production pipeline. LaTeX → PDF (latexmk) → PWG-Raster
-(ghostscript) → IPP (hand-rolled client) → polled `job-impressions-completed`
+`v1.1.0` — production pipeline. LaTeX → PDF (latexmk) → URF
+(ghostscript `urfgray`) → IPP (hand-rolled client) → polled `job-impressions-completed`
 per physical sheet. Two tools (`print_latex`, `watch_page`) plus four
 resources (`printer://status`, `printer://capabilities`,
 `printer://jobs/<id>`, `printer://history`). The shipped skill
@@ -51,7 +51,7 @@ Environment variables (see `src/printer_mcp/config.py`):
 | Var | Default | Purpose |
 |---|---|---|
 | `PRINTER_MCP_URI` | `ipp://192.168.1.251/ipp/print` | Target printer IPP URI |
-| `PRINTER_MCP_PWG_DPI` | `600` | PWG-Raster resolution; HL-L2865DW native is 600dpi |
+| `PRINTER_MCP_RASTER_DPI` | `600` | URF render resolution; HL-L2865DW native is 600dpi. Legacy `PRINTER_MCP_PWG_DPI` honoured as fallback. |
 | `PRINTER_MCP_FIRST_PAGE_TIMEOUT` | `60` | Max wait for page 1 (cold fuser ~14s) |
 | `PRINTER_MCP_NEXT_PAGE_TIMEOUT` | `60` | Max wait for subsequent pages (~1.7s warm) |
 | `PRINTER_MCP_POLL_INTERVAL` | `0.5` | Get-Job-Attributes poll cadence |

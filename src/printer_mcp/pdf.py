@@ -4,10 +4,13 @@ Three operations off the compiled PDF:
 
 - ``page_count`` — IPP returns ``job-impressions = no-value`` (discussions/890),
   so total pages must come from us, not the printer.
-- ``to_pwg`` — Ghostscript's ``pwgraster`` device produces the wire format the
-  HL-L2865DW expects. The probe confirmed ``image/pwg-raster`` is the only
-  practical document-format the printer accepts. ``cups-filters`` was rejected
-  as an alternative because ghostscript was sufficient on its own.
+- ``to_urf`` — Ghostscript's ``urfgray`` device produces Apple URF, which
+  the HL-L2865DW lists as its ``document-format-preferred``. The PWG-Raster
+  output the discussion originally settled on rendered inverted (white text
+  on black background) — the device emits 1bpp ColorSpace=K but the printer
+  interprets it as W-space, flipping foreground and background. URF is 8bpp
+  sGRAY natively with no colorspace ambiguity. Empirically verified with
+  side-by-side test prints (16 May).
 - ``page_to_png`` — Used for the inline page image returned by
   ``print_latex`` / ``watch_page``. ``pdftoppm`` from poppler-utils is the
   shortest path; we render at 100dpi which is enough for the model to read
@@ -39,14 +42,14 @@ def page_count(pdf: Path) -> int:
     raise RuntimeError(f"pdfinfo returned no Pages line:\n{proc.stdout}")
 
 
-def to_pwg(pdf: Path, pwg: Path, dpi: int, page_pixels: tuple[int, int]) -> None:
-    """Render ``pdf`` to a PWG-Raster file at ``pwg``.
+def to_urf(pdf: Path, urf: Path, dpi: int, page_pixels: tuple[int, int]) -> None:
+    """Render ``pdf`` to an Apple URF file at ``urf``.
 
-    ``dpi`` and ``page_pixels`` should be consistent with each other and with
-    the printer's native resolution — discussions/890 settled on 600dpi after
-    the probe showed the HL-L2865DW upsamples internally otherwise. The two
-    values aren't derived from each other inside this function so the caller
-    can override either independently (handy for tests and tiny-pixel probes).
+    ``dpi`` and ``page_pixels`` should be consistent with each other. The
+    HL-L2865DW reports 600dpi as its native resolution; lower dpi causes
+    internal upsampling with a quality cost. The two values aren't derived
+    from each other so the caller can override either independently (handy
+    for tests and tiny-pixel probes).
     """
     gs = shutil.which("gs")
     if gs is None:
@@ -57,18 +60,18 @@ def to_pwg(pdf: Path, pwg: Path, dpi: int, page_pixels: tuple[int, int]) -> None
         "-dNOPAUSE",
         "-dBATCH",
         "-dQUIET",
-        "-sDEVICE=pwgraster",
+        "-sDEVICE=urfgray",
         f"-r{dpi}",
         f"-g{width}x{height}",
         "-dPDFFitPage",
-        f"-sOutputFile={pwg}",
+        f"-sOutputFile={urf}",
         str(pdf),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     if proc.returncode != 0:
-        raise RuntimeError(f"ghostscript pwgraster failed: {proc.stderr.strip()}")
-    if not pwg.exists():
-        raise RuntimeError("ghostscript pwgraster produced no output")
+        raise RuntimeError(f"ghostscript urfgray failed: {proc.stderr.strip()}")
+    if not urf.exists():
+        raise RuntimeError("ghostscript urfgray produced no output")
 
 
 def page_to_png(pdf: Path, page: int, dpi: int = PREVIEW_DPI) -> bytes:

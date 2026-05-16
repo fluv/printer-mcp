@@ -259,20 +259,26 @@ def _post(uri: str, payload: bytes, timeout: float) -> bytes:
         conn.close()
 
 
-def submit_pwg(
+def submit_urf(
     uri: str,
-    pwg_path: str,
+    urf_path: str,
     job_name: str,
     user: str,
     timeout: float = DEFAULT_HTTP_TIMEOUT,
 ) -> int:
-    """Send a Print-Job request with a PWG-Raster payload, return job-id."""
-    with open(pwg_path, "rb") as f:
+    """Send a Print-Job request with an Apple URF payload, return job-id.
+
+    URF is the printer's ``document-format-preferred`` (probe in
+    discussions/890). Switched from PWG-Raster after that pipeline rendered
+    inverted (white on black) — see ``pdf.to_urf`` for the colorspace
+    explanation.
+    """
+    with open(urf_path, "rb") as f:
         payload = f.read()
     op_attrs = (
         _common_op_attrs(uri, user)
         + _enc_string_attr(TAG_NAME_WITHOUT_LANG, "job-name", job_name)
-        + _enc_string_attr(TAG_MIME_MEDIA_TYPE, "document-format", "image/pwg-raster")
+        + _enc_string_attr(TAG_MIME_MEDIA_TYPE, "document-format", "image/urf")
     )
     req = _build_request(OP_PRINT_JOB, 1, op_attrs, payload=payload)
     resp = _parse_response(_post(uri, req, timeout))
@@ -331,6 +337,6 @@ __all__ = [
     "TERMINAL_JOB_STATES",
     "get_job_attrs",
     "get_printer_attrs",
-    "submit_pwg",
+    "submit_urf",
 ]
 
