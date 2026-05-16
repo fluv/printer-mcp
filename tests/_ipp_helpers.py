@@ -12,13 +12,7 @@ import io
 import struct
 from typing import Any
 
-from printer_mcp.ipp import (
-    IPP_VERSION,
-    TAG_END_OF_ATTRS,
-    TAG_NO_VALUE,
-    _INTEGER_TAGS,
-    _STRING_TAGS,
-)
+from printer_mcp.ipp import IPP_VERSION, TAG_END_OF_ATTRS, TAG_NO_VALUE, _INTEGER_TAGS, _STRING_TAGS
 
 
 def build_response(
