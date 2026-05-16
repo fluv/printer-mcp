@@ -20,8 +20,8 @@ from printer_mcp.ipp import (
     TAG_URI,
     TERMINAL_JOB_STATES,
     _parse_response,
-    build_response,
 )
+from tests._ipp_helpers import build_response
 
 
 def test_parse_recovers_string_and_integer_attributes() -> None:

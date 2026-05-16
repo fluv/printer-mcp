@@ -163,8 +163,12 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, 
     monkeypatch.setattr(server, "submit_pwg", fake_submit)
     monkeypatch.setattr(server, "get_job_attrs", fake_get_job_attrs)
     monkeypatch.setattr(server, "get_printer_attrs", fake_get_printer_attrs)
-    # Speed up the poll loop in tests — production default is 0.5s.
-    monkeypatch.setattr(server.CONFIG, "poll_interval_s", 0.001)
+    # Speed up the poll loop in tests — Config is frozen so swap the whole
+    # CONFIG attribute on the server module rather than mutating a field.
+    from dataclasses import replace
+    monkeypatch.setattr(
+        server, "CONFIG", replace(server.CONFIG, poll_interval_s=0.001)
+    )
     return state
 
 
