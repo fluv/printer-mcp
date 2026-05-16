@@ -72,10 +72,19 @@ def to_pwg(pdf: Path, pwg: Path, dpi: int, page_pixels: tuple[int, int]) -> None
 
 
 def page_to_png(pdf: Path, page: int, dpi: int = PREVIEW_DPI) -> bytes:
-    """Render a single PDF page to PNG bytes (1-indexed page number)."""
+    """Render a single PDF page to PNG bytes (1-indexed page number).
+
+    Writes to a tempfile inside the PDF's parent directory and reads it back.
+    The seemingly simpler ``pdftoppm ... -`` (stdout) path silently produces
+    empty output in poppler 25.x — the trailing ``-`` is parsed as a literal
+    output prefix and discarded. Round-tripping through disk avoids that gotcha
+    at the cost of a single tempfile in the existing per-job workdir.
+    """
     pdftoppm = shutil.which("pdftoppm")
     if pdftoppm is None:
         raise RuntimeError("pdftoppm not found; image missing poppler-utils?")
+    out_prefix = pdf.parent / f"page-{page}"
+    out_path = pdf.parent / f"page-{page}.png"
     cmd = [
         pdftoppm,
         "-png",
@@ -84,11 +93,13 @@ def page_to_png(pdf: Path, page: int, dpi: int = PREVIEW_DPI) -> bytes:
         "-l", str(page),
         "-singlefile",
         str(pdf),
-        "-",  # output to stdout
+        str(out_prefix),
     ]
     proc = subprocess.run(cmd, capture_output=True, timeout=30)
     if proc.returncode != 0:
         raise RuntimeError(
             f"pdftoppm failed: {proc.stderr.decode(errors='replace').strip()}"
         )
-    return proc.stdout
+    if not out_path.exists():
+        raise RuntimeError(f"pdftoppm produced no output at {out_path}")
+    return out_path.read_bytes()
